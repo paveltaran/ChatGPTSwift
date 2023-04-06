@@ -26,6 +26,7 @@ Pod::Spec.new do |s|
     s.source       = { :git => "https://github.com/alfianlosari/ChatGPTSwift.git", :tag => s.version }
     s.source_files  = ["Sources/ChatGPTSwift/**/*.swift"]
     s.dependency 'GPTEncoder', '1.0.0'
+    s.dependency 'CancellationToken'
   
     s.requires_arc = true
   end
