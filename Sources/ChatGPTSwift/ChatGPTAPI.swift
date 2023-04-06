@@ -104,21 +104,21 @@ public class ChatGPTAPI: @unchecked Sendable {
         }
         
         
-        var isCanceled = false
+        var isCancelled = false
         
         func _cancel() -> Void {
-            isCanceled = true
+            isCancelled = true
         }
         
         var cancel = _cancel
         
         let stream = AsyncThrowingStream<(String, String), Error> {  continuation in
             
-            let task = Task(priority: .userInitiated) { [weak self, isCanceled] in
+            let task = Task(priority: .userInitiated) { [weak self, isCancelled] in
                 do {
                     var responseText = ""
                     for try await line in result.lines {
-                        if isCanceled {
+                        if isCancelled {
                             break
                         }
                         if line.hasPrefix("data: "),
@@ -138,8 +138,8 @@ public class ChatGPTAPI: @unchecked Sendable {
             }
             
             func _cancel() -> Void {
-                if !isCanceled {
-                    isCanceled = true
+                if !isCancelled {
+                    isCancelled = true
                     if !task.isCancelled {
                         task.cancel()
                         continuation.finish(throwing: URLError(.cancelled))
