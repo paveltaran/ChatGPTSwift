@@ -8,11 +8,6 @@
 import Foundation
 import GPTEncoder
 
-#if os(Linux)
-    import AsyncHTTPClient
-    import FoundationNetworking
-    import NIOFoundationCompat
-#endif
 
 public class ChatGPTAPI: @unchecked Sendable {
     
@@ -22,7 +17,7 @@ public class ChatGPTAPI: @unchecked Sendable {
         public static let defaultTemperature = 0.5
     }
     
-    private let urlString = "https://api.openai.com/v1/chat/completions"
+    private var urlString = "https://robat.ai/v1/chat/completions"
     private let apiKey: String
     private let gptEncoder = GPTEncoder()
     public private(set) var historyList = [Message]()
@@ -75,99 +70,6 @@ public class ChatGPTAPI: @unchecked Sendable {
         self.historyList.append(Message(role: "user", content: userText))
         self.historyList.append(Message(role: "assistant", content: responseText))
     }
-    
-    #if os(Linux)
-    private let httpClient = HTTPClient(eventLoopGroupProvider: .createNew)
-    private var clientRequest: HTTPClientRequest {
-        var request = HTTPClientRequest(url: urlString)
-        request.method = .POST
-        headers.forEach {
-            request.headers.add(name: $0.key, value: $0.value)
-        }
-        return request
-    }
-
-
-    public func sendMessageStream(text: String) async throws -> AsyncThrowingStream<String, Error> {
-         var request = self.clientRequest
-        request.body = .bytes(try jsonBody(text: text, stream: true))
-        
-        let response = try await httpClient.execute(request, timeout: .seconds(25))
-
-        guard response.status == .ok else {
-            var data = Data()
-            for try await buffer in response.body {
-                data.append(.init(buffer: buffer))
-            }
-            var error = "Bad Response: \(response.status.code)"
-            if data.count > 0, let errorResponse = try? jsonDecoder.decode(ErrorRootResponse.self, from: data).error {
-                error.append("\n\(errorResponse.message)")
-            }
-            throw error
-        }
-        
-        return AsyncThrowingStream<String, Error> {  continuation in
-            Task(priority: .userInitiated) { [weak self] in
-                do {
-                    var responseText = ""
-                    for try await buffer in response.body {
-                        let line = String(buffer: buffer)
-                        if line.hasPrefix("data: "),
-                           let data = line.dropFirst(6).data(using: .utf8),
-                           let response = try? self?.jsonDecoder.decode(StreamCompletionResponse.self, from: data),
-                           let text = response.choices.first?.delta.content {
-                            responseText += text
-                            continuation.yield(text)
-                        }
-                    }
-                    self?.appendToHistoryList(userText: text, responseText: responseText)
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
-        }
-    }
-
-    public func sendMessage(text: String,
-                            model: String = ChatGPTAPI.Constants.defaultModel,
-                            systemText: String = ChatGPTAPI.Constants.defaultSystemText,
-                            temperature: Double = ChatGPTAPI.Constants.defaultTemperature) async throws -> String {
-        var request = self.clientRequest
-        request.body = .bytes(try jsonBody(text: text, model: model, systemText: systemText, temperature: temperature, stream: false))
-        
-        let response = try await httpClient.execute(request, timeout: .seconds(25))
-
-        var data = Data()
-        for try await buffer in response.body {
-            data.append(.init(buffer: buffer))
-        }
-
-        guard response.status == .ok else {
-            var error = "Bad Response: \(response.status.code)"
-            if data.count > 0, let errorResponse = try? jsonDecoder.decode(ErrorRootResponse.self, from: data).error {
-                error.append("\n\(errorResponse.message)")
-            }
-            throw error
-        }
-        
-        do {
-            let completionResponse = try self.jsonDecoder.decode(CompletionResponse.self, from: data)
-            let responseText = completionResponse.choices.first?.message.content ?? ""
-            self.appendToHistoryList(userText: text, responseText: responseText)
-            return responseText
-        } catch {
-            throw error
-        }
-        
-    }
-
-    deinit {
-        let client = self.httpClient
-        Task.detached { try await client.shutdown() }
-        
-    }
-    #else
 
     private let urlSession = URLSession.shared
     private var urlRequest: URLRequest {
@@ -181,7 +83,7 @@ public class ChatGPTAPI: @unchecked Sendable {
     public func sendMessageStream(text: String,
                                   model: String = ChatGPTAPI.Constants.defaultModel,
                                   systemText: String = ChatGPTAPI.Constants.defaultSystemText,
-                                  temperature: Double = ChatGPTAPI.Constants.defaultTemperature) async throws -> AsyncThrowingStream<String, Error> {
+                                  temperature: Double = ChatGPTAPI.Constants.defaultTemperature) async throws -> (AsyncThrowingStream<(String, String), Error>, () -> Void) {
         var urlRequest = self.urlRequest
         urlRequest.httpBody = try jsonBody(text: text, model: model, systemText: systemText, temperature: temperature)
         let (result, response) = try await urlSession.bytes(for: urlRequest)
@@ -201,18 +103,32 @@ public class ChatGPTAPI: @unchecked Sendable {
             throw "Bad Response: \(httpResponse.statusCode). \(errorText)"
         }
         
-        return AsyncThrowingStream<String, Error> {  continuation in
-            Task(priority: .userInitiated) { [weak self] in
+        
+        var isCanceled = false
+        
+        func _cancel() -> Void {
+            isCanceled = true
+        }
+        
+        var cancel = _cancel
+        
+        let stream = AsyncThrowingStream<(String, String), Error> {  continuation in
+            
+            let task = Task(priority: .userInitiated) { [weak self, isCanceled] in
                 do {
                     var responseText = ""
                     for try await line in result.lines {
+                        if isCanceled {
+                            break
+                        }
                         if line.hasPrefix("data: "),
                            let data = line.dropFirst(6).data(using: .utf8),
                            let response = try? self?.jsonDecoder.decode(StreamCompletionResponse.self, from: data),
                            let text = response.choices.first?.delta.content {
-                            responseText += text
-                            continuation.yield(text)
-                        }
+                             responseText += text
+                            
+                            continuation.yield((response.id, text))
+                       }
                     }
                     self?.appendToHistoryList(userText: text, responseText: responseText)
                     continuation.finish()
@@ -220,7 +136,22 @@ public class ChatGPTAPI: @unchecked Sendable {
                     continuation.finish(throwing: error)
                 }
             }
+            
+            func _cancel() -> Void {
+                if !isCanceled {
+                    isCanceled = true
+                    if !task.isCancelled {
+                        task.cancel()
+                        continuation.finish(throwing: URLError(.cancelled))
+                    }
+                }
+            }
+            
+            cancel = _cancel
+            
         }
+        
+        return (stream, cancel)
     }
 
     public func sendMessage(text: String,
@@ -253,7 +184,6 @@ public class ChatGPTAPI: @unchecked Sendable {
             throw error
         }
     }
-    #endif
     
     public func deleteHistoryList() {
         self.historyList.removeAll()

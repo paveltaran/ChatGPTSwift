@@ -42,6 +42,7 @@ struct ErrorResponse: Decodable {
 struct CompletionResponse: Decodable {
     let choices: [Choice]
     let usage: Usage?
+    let id: String
 }
 
 struct Usage: Decodable {
@@ -57,6 +58,7 @@ struct Choice: Decodable {
 
 struct StreamCompletionResponse: Decodable {
     let choices: [StreamChoice]
+    let id: String
 }
 
 struct StreamChoice: Decodable {
