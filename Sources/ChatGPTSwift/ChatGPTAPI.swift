@@ -50,7 +50,7 @@ public class ChatGPTAPI: @unchecked Sendable {
     }
     
     private func generateMessages(from text: String, systemText: String) -> [Message] {
-        var messages = [systemMessage(content: systemText)] + historyList + [Message(role: "user", content: text)]
+        var messages = [systemMessage(content: systemText)] + historyList //+ [Message(role: "user", content: text)]
         if gptEncoder.encode(text: messages.content).count > 4096  {
             _ = historyList.removeFirst()
             messages = generateMessages(from: text, systemText: systemText)
@@ -130,7 +130,7 @@ public class ChatGPTAPI: @unchecked Sendable {
                             continuation.yield((response.id, text))
                        }
                     }
-                    self?.appendToHistoryList(userText: text, responseText: responseText)
+                    //self?.appendToHistoryList(userText: text, responseText: responseText)
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -178,7 +178,7 @@ public class ChatGPTAPI: @unchecked Sendable {
         do {
             let completionResponse = try self.jsonDecoder.decode(CompletionResponse.self, from: data)
             let responseText = completionResponse.choices.first?.message.content ?? ""
-            self.appendToHistoryList(userText: text, responseText: responseText)
+            //self.appendToHistoryList(userText: text, responseText: responseText)
             return responseText
         } catch {
             throw error
