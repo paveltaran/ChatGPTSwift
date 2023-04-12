@@ -11,6 +11,8 @@ import GPTEncoder
 
 public class ChatGPTAPI: @unchecked Sendable {
     
+//    typealias CompletionHandler = (Result<StreamCompletionResponse, Error>) -> Void
+    
     public enum Constants {
         public static let defaultModel = "gpt-3.5-turbo"
         public static let defaultSystemText = "You're a helpful assistant"
@@ -153,6 +155,22 @@ public class ChatGPTAPI: @unchecked Sendable {
         
         return (stream, cancel)
     }
+    
+    public func sendMessageStreamDataTask(text: String,
+                                          model: String = ChatGPTAPI.Constants.defaultModel,
+                                          systemText: String = ChatGPTAPI.Constants.defaultSystemText,
+                                          temperature: Double = ChatGPTAPI.Constants.defaultTemperature,
+                                          completion: @escaping (Result<String, Error>) -> Void) throws -> URLSessionDataTask? {
+        
+        
+        var urlRequest = self.urlRequest
+        urlRequest.httpBody = try jsonBody(text: text, model: model, systemText: systemText, temperature: temperature)
+        
+        return NetworkManager().send(request: urlRequest) { result in
+            completion(result)
+        }
+        
+    }
 
     public func sendMessage(text: String,
                             model: String = ChatGPTAPI.Constants.defaultModel,
@@ -194,4 +212,5 @@ public class ChatGPTAPI: @unchecked Sendable {
     }
     
 }
+
 
