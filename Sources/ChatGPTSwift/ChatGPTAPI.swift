@@ -24,7 +24,6 @@ public class ChatGPTAPI: @unchecked Sendable {
     private let apiKey: String
     let gptEncoder = GPTEncoder()
     public var historyList = [Message]()
-    public var historyListTranslate = [MessageTranslate]()
 
     let dateFormatter: DateFormatter = {
         let df = DateFormatter()
