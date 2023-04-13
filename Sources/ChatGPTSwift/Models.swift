@@ -10,17 +10,28 @@ import Foundation
 public struct Message: Codable {
     public let role: String
     public let content: String
+    public let language: String
+    public let contentEnglish: String
     
     public init(role: String, content: String) {
+        self.init(role: role, content: content, language: "")
+    }
+    
+    public init(role: String, content: String, language: String) {
+        self.init(role: role, content: content, language: language, contentEnglish: "")    }
+    
+    public init(role: String, content: String, language: String, contentEnglish: String) {
         self.role = role
         self.content = content
+        self.language = language
+        self.contentEnglish = contentEnglish
     }
 }
 
 extension Array where Element == Message {
     
-    var contentCount: Int { map { $0.content }.count }
-    var content: String { reduce("") { $0 + $1.content } }
+    var contentCount: Int { map { $0.contentEnglish == "" ? $0.content : $0.contentEnglish }.count }
+    var content: String { reduce("") { $0 + ($1.contentEnglish == "" ? $1.content : $1.contentEnglish) } }
 }
 
 struct Request: Codable {
@@ -43,6 +54,7 @@ struct CompletionResponse: Decodable {
     let choices: [Choice]
     let usage: Usage?
     let id: String
+    let userMessage: Message
 }
 
 struct Usage: Decodable {

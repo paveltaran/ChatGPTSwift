@@ -19,10 +19,12 @@ public class ChatGPTAPI: @unchecked Sendable {
         public static let defaultTemperature = 0.5
     }
     
-    private var urlString = "https://robat.ai/v1/chat/completions"
+    var urlString = "https://robat.ai/v1/chat/completions"
+    var urlStringTranslate = "https://robat.ai/translate/v1/chat/completions"
     private let apiKey: String
-    private let gptEncoder = GPTEncoder()
-    public private(set) var historyList = [Message]()
+    let gptEncoder = GPTEncoder()
+    public var historyList = [Message]()
+    public var historyListTranslate = [MessageTranslate]()
 
     let dateFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -30,40 +32,40 @@ public class ChatGPTAPI: @unchecked Sendable {
         return df
     }()
     
-    private let jsonDecoder: JSONDecoder = {
+    let jsonDecoder: JSONDecoder = {
         let jsonDecoder = JSONDecoder()
         jsonDecoder.keyDecodingStrategy = .convertFromSnakeCase
         return jsonDecoder
     }()
     
-    private var headers: [String: String] {
+    var headers: [String: String] {
         [
             "Content-Type": "application/json",
             "Authorization": "Bearer \(apiKey)"
         ]
     }
     
-    private func systemMessage(content: String) -> Message {
-        .init(role: "system", content: content)
+    func systemMessage(content: String) -> Message {
+        .init(role: "system", content: content, language: "")
     }
     
     public init(apiKey: String) {
         self.apiKey = apiKey
     }
     
-    private func generateMessages(from text: String, systemText: String) -> [Message] {
+    private func generateMessages(from text: String, lang: String = "", systemText: String) -> [Message] {
         var messages = [systemMessage(content: systemText)] + historyList //+ [Message(role: "user", content: text)]
         if gptEncoder.encode(text: messages.content).count > 4096  {
             _ = historyList.removeFirst()
-            messages = generateMessages(from: text, systemText: systemText)
+            messages = generateMessages(from: text, lang: lang, systemText: systemText)
         }
         return messages
     }
     
-    private func jsonBody(text: String, model: String, systemText: String, temperature: Double, stream: Bool = true) throws -> Data {
+    func jsonBody(text: String, lang: String = "", model: String, systemText: String, temperature: Double, stream: Bool = true) throws -> Data {
         let request = Request(model: model,
                         temperature: temperature,
-                        messages: generateMessages(from: text, systemText: systemText),
+                              messages: generateMessages(from: text, lang: lang, systemText: systemText),
                         stream: stream)
         return try JSONEncoder().encode(request)
     }
@@ -176,6 +178,7 @@ public class ChatGPTAPI: @unchecked Sendable {
                             model: String = ChatGPTAPI.Constants.defaultModel,
                             systemText: String = ChatGPTAPI.Constants.defaultSystemText,
                             temperature: Double = ChatGPTAPI.Constants.defaultTemperature) async throws -> String {
+        
         var urlRequest = self.urlRequest
         urlRequest.httpBody = try jsonBody(text: text, model: model, systemText: systemText, temperature: temperature, stream: false)
         

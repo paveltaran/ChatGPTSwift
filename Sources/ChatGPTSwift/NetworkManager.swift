@@ -14,6 +14,8 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     
     private lazy var urlSession: URLSession = {
         let configuration = URLSessionConfiguration.default
+//        configuration.timeoutIntervalForRequest = 3000
+//        configuration.timeoutIntervalForResource = 3000
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }()
     
@@ -55,7 +57,13 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
             self.urlSession(session, task: dataTask, didCompleteWithError: error)
             return
         }
-        processResponseData(data)
+        print(dataTask.currentRequest?.url?.relativePath)
+        if let isTranslate = dataTask.currentRequest?.url?.relativePath.contains("/translate/"), isTranslate {
+            processResponseDataTranslate(data)
+        } else {
+            processResponseData(data)
+        }
+        
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
@@ -75,6 +83,16 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
                 let content = response.choices.first?.delta.content {
                 self.completionHandler?(.success(content))
             }
+        }
+    }
+    
+    private func processResponseDataTranslate(_ data: Data) {
+        let response = try? jsonDecoder.decode(CompletionResponse.self, from: data)
+        if let srcText = response?.choices.first?.message.content,
+            let enText = response?.choices.first?.message.contentEnglish,
+           let userMessage = response?.userMessage {
+            let content = "\(userMessage.contentEnglish)\n----[]----\n\(srcText)\n----[]----\n\(enText)"
+            self.completionHandler?(.success(content))
         }
     }
     
