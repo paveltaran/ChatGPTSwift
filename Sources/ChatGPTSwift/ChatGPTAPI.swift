@@ -16,7 +16,7 @@ public class ChatGPTAPI: @unchecked Sendable {
     public enum Constants {
         public static let defaultModel = "gpt-3.5-turbo"
         public static let defaultSystemText = "You're a helpful assistant"
-        public static let defaultTemperature = 0.5
+        public static let defaultTemperature = 0.7639320225002906
     }
     
     var urlString = "https://robat.ai/v1/chat/completions"
