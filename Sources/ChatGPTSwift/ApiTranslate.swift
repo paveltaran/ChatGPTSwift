@@ -25,7 +25,7 @@ extension ChatGPTAPI {
                                           model: String = ChatGPTAPI.Constants.defaultModel,
                                           systemText: String = ChatGPTAPI.Constants.defaultSystemText,
                                           temperature: Double = ChatGPTAPI.Constants.defaultTemperature,
-                                          completion: @escaping (Result<String, Error>) -> Void) throws -> URLSessionDataTask? {
+                                          completion: @escaping (Result<[String], Error>) -> Void) throws -> URLSessionDataTask? {
         
         
         var urlRequest = self.getRequestTranslate()

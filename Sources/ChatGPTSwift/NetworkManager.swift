@@ -26,8 +26,9 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     }()
     
     var error: Error?
+    var body: String = ""
     
-    typealias CompletionHandler = (Result<String, Error>) -> Void
+    typealias CompletionHandler = (Result<[String], Error>) -> Void
     private var completionHandler: CompletionHandler?
     
     func cancel() {
@@ -70,20 +71,32 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
         if let error = error {
             self.completionHandler?(.failure(error))
         } else {
-            self.completionHandler?(.success(""))
+            self.completionHandler?(.success([]))
         }
     }
-
+    
     // Process the response data
     private func processResponseData(_ data: Data) {
-        for line in splitDataByNewline(data) {
-            if line.hasPrefix("data: "),
-                let data = line.dropFirst(6).data(using: .utf8),
-                let response = try? jsonDecoder.decode(StreamCompletionResponse.self, from: data),
-                let content = response.choices.first?.delta.content {
-                self.completionHandler?(.success(content))
-            }
+        if let text = String(data: data, encoding: .utf8) {
+            self.body += text
         }
+        if body.contains("\n") {
+            let text = removeTextAfterLastNewline(in: body)
+            body = String(body.dropFirst(text.count))
+            var result: [String] = []
+            for line in splitStringByNewline(text) {
+                if line.hasPrefix("data: "),
+                    let data = line.dropFirst(6).data(using: .utf8),
+                    let response = try? jsonDecoder.decode(StreamCompletionResponse.self, from: data),
+                    let content = response.choices.first?.delta.content {
+                        result.append(content)
+                } else {
+                    print("line", line)
+                }
+            }
+            self.completionHandler?(.success(result))
+        }
+        
     }
     
     private func processResponseDataTranslate(_ data: Data) {
@@ -91,7 +104,8 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
         if let srcText = response?.choices.first?.message.content,
             let enText = response?.choices.first?.message.contentEnglish,
            let userMessage = response?.userMessage {
-            let content = "\(userMessage.contentEnglish)\n----[]----\n\(srcText)\n----[]----\n\(enText)"
+//            let content = "\(userMessage.contentEnglish)\n----[]----\n\(srcText)\n----[]----\n\(enText)"
+            let content = [userMessage.contentEnglish, srcText, enText]
             self.completionHandler?(.success(content))
         }
     }
@@ -110,4 +124,16 @@ func splitDataByNewline(_ data: Data) -> [String] {
     } else {
         return []
     }
+}
+
+
+func splitStringByNewline(_ input: String) -> [String] {
+    return input.split(separator: "\n", omittingEmptySubsequences: false).map {String($0)}
+}
+
+
+func removeTextAfterLastNewline(in input: String) -> String {
+    let components = input.split(separator: "\n", omittingEmptySubsequences: false)
+    guard components.count > 1 else { return input }
+    return components.dropLast().joined(separator: "\n")
 }
