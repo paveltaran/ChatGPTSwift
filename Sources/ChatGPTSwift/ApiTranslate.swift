@@ -12,8 +12,8 @@ import Foundation
 extension ChatGPTAPI {
     
     
-    public func getRequestTranslate() -> URLRequest {
-        let url = URL(string: urlStringTranslate)!
+    public func getRequestTranslate(lang: String) -> URLRequest {
+        let url = URL(string: urlStringTranslate+"?lang=\(lang)")!
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         headers.forEach {  urlRequest.setValue($1, forHTTPHeaderField: $0) }
@@ -28,7 +28,7 @@ extension ChatGPTAPI {
                                           completion: @escaping (Result<[String], Error>) -> Void) throws -> URLSessionDataTask? {
         
         
-        var urlRequest = self.getRequestTranslate()
+        var urlRequest = self.getRequestTranslate(lang: lang)
         urlRequest.httpBody = try jsonBody(text: text, lang: lang, model: model, systemText: systemText, temperature: temperature)
         print(String(data:urlRequest.httpBody!, encoding: .utf8))
         
