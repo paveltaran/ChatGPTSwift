@@ -45,7 +45,7 @@ public class ChatGPTAPI: @unchecked Sendable {
     }
     
     func systemMessage(content: String) -> Message {
-        .init(role: "system", content: content, language: "")
+        .init(role: "system", content: content)
     }
     
     public init(apiKey: String) {
@@ -57,9 +57,10 @@ public class ChatGPTAPI: @unchecked Sendable {
         if isPrompt {
             messages += [Message(role: "user", content: text)]
         }
+        print("gptEncoder.encode(text: messages.content).count", gptEncoder.encode(text: messages.content).count)
         if gptEncoder.encode(text: messages.content).count > 4096  {
             _ = historyList.removeFirst()
-            messages = generateMessages(from: text, lang: lang, systemText: systemText)
+            messages = generateMessages(from: text, lang: lang, systemText: systemText, isPrompt: isPrompt)
         }
         return messages
     }
@@ -67,7 +68,7 @@ public class ChatGPTAPI: @unchecked Sendable {
     func jsonBody(text: String, lang: String = "", model: String, systemText: String, temperature: Double, stream: Bool = true, isPrompt: Bool = false) throws -> Data {
         let request = Request(model: model,
                         temperature: temperature,
-                              messages: generateMessages(from: text, lang: lang, systemText: systemText, isPrompt: isPrompt),
+                          messages: generateMessages(from: text, lang: lang, systemText: systemText, isPrompt: isPrompt),
                         stream: stream)
         return try JSONEncoder().encode(request)
     }
