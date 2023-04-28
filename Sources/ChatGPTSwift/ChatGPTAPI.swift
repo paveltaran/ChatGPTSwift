@@ -52,8 +52,11 @@ public class ChatGPTAPI: @unchecked Sendable {
         self.apiKey = apiKey
     }
     
-    private func generateMessages(from text: String, lang: String = "", systemText: String) -> [Message] {
+    private func generateMessages(from text: String, lang: String = "", systemText: String, isPrompt: Bool = false) -> [Message] {
         var messages = [systemMessage(content: systemText)] + historyList //+ [Message(role: "user", content: text)]
+        if isPrompt {
+            messages += [Message(role: "user", content: text)]
+        }
         if gptEncoder.encode(text: messages.content).count > 4096  {
             _ = historyList.removeFirst()
             messages = generateMessages(from: text, lang: lang, systemText: systemText)
@@ -61,10 +64,10 @@ public class ChatGPTAPI: @unchecked Sendable {
         return messages
     }
     
-    func jsonBody(text: String, lang: String = "", model: String, systemText: String, temperature: Double, stream: Bool = true) throws -> Data {
+    func jsonBody(text: String, lang: String = "", model: String, systemText: String, temperature: Double, stream: Bool = true, isPrompt: Bool = false) throws -> Data {
         let request = Request(model: model,
                         temperature: temperature,
-                              messages: generateMessages(from: text, lang: lang, systemText: systemText),
+                              messages: generateMessages(from: text, lang: lang, systemText: systemText, isPrompt: isPrompt),
                         stream: stream)
         return try JSONEncoder().encode(request)
     }
@@ -171,6 +174,32 @@ public class ChatGPTAPI: @unchecked Sendable {
             completion(result)
         }
         
+    }
+    
+    public func getRequestPromt() -> URLRequest {
+        let url = URL(string: urlString+"?promt=1")!
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        headers.forEach {  urlRequest.setValue($1, forHTTPHeaderField: $0) }
+        return urlRequest
+    }
+    
+    public func sendMessageDataTask(text: String,
+                                    model: String = ChatGPTAPI.Constants.defaultModel,
+                                    systemText: String = ChatGPTAPI.Constants.defaultSystemText,
+                                    isPrompt: Bool = false,
+                                    temperature: Double = ChatGPTAPI.Constants.defaultTemperature,
+                                    completion: @escaping (Result<[String], Error>) -> Void) throws -> URLSessionDataTask? {
+        
+        var urlRequest = self.urlRequest
+        if isPrompt {
+            urlRequest = getRequestPromt()
+        }
+        urlRequest.httpBody = try jsonBody(text: text, model: model, systemText: systemText, temperature: temperature, stream: false, isPrompt: isPrompt)
+        
+        return NetworkManager().send(request: urlRequest) { result in
+            completion(result)
+        }
     }
 
     public func sendMessage(text: String,

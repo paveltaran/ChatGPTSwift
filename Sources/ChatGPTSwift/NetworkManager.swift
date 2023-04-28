@@ -58,11 +58,13 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
             self.urlSession(session, task: dataTask, didCompleteWithError: error)
             return
         }
-        print(dataTask.currentRequest?.url?.relativePath)
+        print(dataTask.currentRequest?.url?.absoluteString)
         if let isTranslate = dataTask.currentRequest?.url?.relativePath.contains("/translate/"), isTranslate {
             processResponseDataTranslate(data)
-        } else {
+        } else if let isPromt = dataTask.currentRequest?.url?.absoluteString.contains("promt"), isPromt {
             processResponseData(data)
+        } else {
+            processResponseDataStream(data)
         }
         
     }
@@ -75,8 +77,17 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
         }
     }
     
-    // Process the response data
     private func processResponseData(_ data: Data) {
+        print(String(data: data, encoding: .utf8))
+        let response = try? jsonDecoder.decode(CompletionResponse.self, from: data)
+        if let srcText = response?.choices.first?.message.content {
+            let content = [srcText]
+            self.completionHandler?(.success(content))
+        }
+    }
+    
+    // Process the response data
+    private func processResponseDataStream(_ data: Data) {
         if let text = String(data: data, encoding: .utf8) {
             self.body += text
         }
@@ -103,9 +114,8 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
         let response = try? jsonDecoder.decode(CompletionResponse.self, from: data)
         if let srcText = response?.choices.first?.message.content,
             let enText = response?.choices.first?.message.contentEnglish,
-           let userMessage = response?.userMessage {
-//            let content = "\(userMessage.contentEnglish)\n----[]----\n\(srcText)\n----[]----\n\(enText)"
-            let content = [userMessage.contentEnglish, srcText, enText]
+           let userEnText = response?.userMessage?.contentEnglish {
+            let content = [userEnText, srcText, enText]
             self.completionHandler?(.success(content))
         }
     }
