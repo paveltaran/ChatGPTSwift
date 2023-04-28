@@ -57,7 +57,6 @@ public class ChatGPTAPI: @unchecked Sendable {
         if isPrompt {
             messages += [Message(role: "user", content: text)]
         }
-        print("gptEncoder.encode(text: messages.content).count", gptEncoder.encode(text: messages.content).count)
         if gptEncoder.encode(text: messages.content).count > 4096  {
             _ = historyList.removeFirst()
             messages = generateMessages(from: text, lang: lang, systemText: systemText, isPrompt: isPrompt)
