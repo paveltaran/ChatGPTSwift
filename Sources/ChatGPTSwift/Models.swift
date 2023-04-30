@@ -32,8 +32,10 @@ public struct Message: Codable {
 
 extension Array where Element == Message {
     
-    var contentCount: Int { map {  $0.contentEnglish ?? $0.content }.count }
-    var content: String { reduce("") { $0 + ($1.contentEnglish ?? $1.content) } }
+    var contentCount: Int { map {  $0.content }.count }
+    var content: String { reduce("") { $0 + $1.content } }
+    var contentEnglishCount: Int { map { $0.contentEnglish }.count }
+    var contentEnglish: String { reduce("") { $0 + ($1.contentEnglish ?? $1.content) } }
 }
 
 struct Request: Codable {

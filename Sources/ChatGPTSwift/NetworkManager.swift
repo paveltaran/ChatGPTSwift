@@ -14,8 +14,8 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     
     private lazy var urlSession: URLSession = {
         let configuration = URLSessionConfiguration.default
-//        configuration.timeoutIntervalForRequest = 3000
-//        configuration.timeoutIntervalForResource = 3000
+        configuration.timeoutIntervalForRequest = 3000
+        configuration.timeoutIntervalForResource = 3000
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }()
     
@@ -101,16 +101,17 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
                     let response = try? jsonDecoder.decode(StreamCompletionResponse.self, from: data),
                     let content = response.choices.first?.delta.content {
                         result.append(content)
-                } else {
-                    print("line", line)
                 }
             }
-            self.completionHandler?(.success(result))
+            if result.count > 0 {
+                self.completionHandler?(.success(result))
+            }
         }
         
     }
     
     private func processResponseDataTranslate(_ data: Data) {
+        print(String(data: data, encoding: .utf8))
         let response = try? jsonDecoder.decode(CompletionResponse.self, from: data)
         if let srcText = response?.choices.first?.message.content,
             let enText = response?.choices.first?.message.contentEnglish,

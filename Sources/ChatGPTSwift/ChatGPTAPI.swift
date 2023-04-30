@@ -52,22 +52,23 @@ public class ChatGPTAPI: @unchecked Sendable {
         self.apiKey = apiKey
     }
     
-    private func generateMessages(from text: String, lang: String = "", systemText: String, isPrompt: Bool = false) -> [Message] {
+    private func generateMessages(from text: String, isTranslate: Bool = false, systemText: String, isPrompt: Bool = false) -> [Message] {
         var messages = [systemMessage(content: systemText)] + historyList //+ [Message(role: "user", content: text)]
         if isPrompt {
             messages += [Message(role: "user", content: text)]
         }
-        if gptEncoder.encode(text: messages.content).count > 4096  {
+//        print("gptEncoder.encode(text: messages.content).count", gptEncoder.encode(text: messages.content).count)
+        if gptEncoder.encode(text: isTranslate ? messages.contentEnglish : messages.content).count > 4096  {
             _ = historyList.removeFirst()
-            messages = generateMessages(from: text, lang: lang, systemText: systemText, isPrompt: isPrompt)
+            messages = generateMessages(from: text, isTranslate: isTranslate, systemText: systemText, isPrompt: isPrompt)
         }
         return messages
     }
     
-    func jsonBody(text: String, lang: String = "", model: String, systemText: String, temperature: Double, stream: Bool = true, isPrompt: Bool = false) throws -> Data {
+    func jsonBody(text: String, isTranslate: Bool = false, model: String, systemText: String, temperature: Double, stream: Bool = true, isPrompt: Bool = false) throws -> Data {
         let request = Request(model: model,
                         temperature: temperature,
-                          messages: generateMessages(from: text, lang: lang, systemText: systemText, isPrompt: isPrompt),
+                          messages: generateMessages(from: text, isTranslate: isTranslate, systemText: systemText, isPrompt: isPrompt),
                         stream: stream)
         return try JSONEncoder().encode(request)
     }
