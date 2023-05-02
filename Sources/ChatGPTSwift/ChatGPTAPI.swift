@@ -19,8 +19,8 @@ public class ChatGPTAPI: @unchecked Sendable {
         public static let defaultTemperature = 0.7639320225002906
     }
     
-    var urlString = "https://robat.ai/v1/chat/completions"
-    var urlStringTranslate = "https://robat.ai/translate/v1/chat/completions"
+    var urlString = "https://api.robat.ai/v1/chat/completions"
+    var urlStringTranslate = "https://api.robat.ai/translate/v1/chat/completions"
     private let apiKey: String
     let gptEncoder = GPTEncoder()
     public var historyList = [Message]()
