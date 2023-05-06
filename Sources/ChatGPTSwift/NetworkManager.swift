@@ -14,8 +14,8 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     
     private lazy var urlSession: URLSession = {
         let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 3000
-        configuration.timeoutIntervalForResource = 3000
+//        configuration.timeoutIntervalForRequest = 3000
+//        configuration.timeoutIntervalForResource = 3000
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }()
     
@@ -58,13 +58,14 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
             self.urlSession(session, task: dataTask, didCompleteWithError: error)
             return
         }
+        
         print(dataTask.currentRequest?.url?.absoluteString)
         if let isTranslate = dataTask.currentRequest?.url?.relativePath.contains("/translate/"), isTranslate {
             processResponseDataTranslate(data)
-        } else if let isPromt = dataTask.currentRequest?.url?.absoluteString.contains("promt"), isPromt {
-            processResponseData(data)
-        } else {
+        } else if let httpBody = dataTask.originalRequest?.httpBody, dataContainsSubstringMatchingRegexp(httpBody, pattern: "\"stream\":\\s?true") {
             processResponseDataStream(data)
+        } else {
+            processResponseData(data)
         }
         
     }
@@ -147,4 +148,29 @@ func removeTextAfterLastNewline(in input: String) -> String {
     let components = input.split(separator: "\n", omittingEmptySubsequences: false)
     guard components.count > 1 else { return input }
     return components.dropLast().joined(separator: "\n")
+}
+
+
+func dataContainsSubstringMatchingRegexp(_ data: Data, pattern: String) -> Bool {
+    // Convert Data to String
+    guard let dataString = String(data: data, encoding: .utf8) else {
+        print("Unable to convert Data to String.")
+        return false
+    }
+
+    // Create a regular expression object
+    let regexp: NSRegularExpression
+    do {
+        regexp = try NSRegularExpression(pattern: pattern, options: [])
+    } catch {
+        print("Invalid regular expression pattern: \(error.localizedDescription)")
+        return false
+    }
+
+    // Check for a match
+    let range = NSRange(location: 0, length: dataString.utf16.count)
+    let matchRange = regexp.rangeOfFirstMatch(in: dataString, options: [], range: range)
+
+    // Return whether a match was found
+    return matchRange.location != NSNotFound
 }
