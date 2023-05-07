@@ -16,12 +16,13 @@ public class ChatGPTAPI: @unchecked Sendable {
     public enum Constants {
         public static let defaultModel = "gpt-3.5-turbo"
         public static let defaultSystemText = "You're a helpful assistant"
-        public static let defaultTemperature = 0.7639320225002906
+        public static let defaultTemperature = 0
     }
     
     var urlString = "https://api.robat.ai/v1/chat/completions"
     var urlStringTranslate = "https://api.robat.ai/translate/v1/chat/completions"
     private let apiKey: String
+    private let deviceId: String
     let gptEncoder = GPTEncoder()
     public var historyList = [Message]()
 
@@ -40,7 +41,8 @@ public class ChatGPTAPI: @unchecked Sendable {
     var headers: [String: String] {
         [
             "Content-Type": "application/json",
-            "Authorization": "Bearer \(apiKey)"
+            "Authorization": "Bearer \(apiKey)",
+            "X-Device-ID": deviceId
         ]
     }
     
@@ -48,8 +50,9 @@ public class ChatGPTAPI: @unchecked Sendable {
         .init(role: "system", content: content)
     }
     
-    public init(apiKey: String) {
+    public init(apiKey: String, deviceId: String) {
         self.apiKey = apiKey
+        self.deviceId = deviceId
     }
     
     private func generateMessages(from text: String, isTranslate: Bool = false, systemText: String, isPrompt: Bool = false) -> [Message] {
