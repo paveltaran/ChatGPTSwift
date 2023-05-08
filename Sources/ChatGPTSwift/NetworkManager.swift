@@ -59,7 +59,7 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
             return
         }
         
-        print(dataTask.currentRequest?.url?.absoluteString)
+//        print(dataTask.currentRequest?.url?.absoluteString)
         if let isTranslate = dataTask.currentRequest?.url?.relativePath.contains("/translate/"), isTranslate {
             processResponseDataTranslate(data)
         } else if let httpBody = dataTask.originalRequest?.httpBody, dataContainsSubstringMatchingRegexp(httpBody, pattern: "\"stream\":\\s?true") {
@@ -79,7 +79,7 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     }
     
     private func processResponseData(_ data: Data) {
-        print(String(data: data, encoding: .utf8))
+//        print(String(data: data, encoding: .utf8))
         let response = try? jsonDecoder.decode(CompletionResponse.self, from: data)
         if let srcText = response?.choices.first?.message.content {
             let content = [srcText]
@@ -112,7 +112,7 @@ class NetworkManager: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     }
     
     private func processResponseDataTranslate(_ data: Data) {
-        print(String(data: data, encoding: .utf8))
+//        print(String(data: data, encoding: .utf8))
         let response = try? jsonDecoder.decode(CompletionResponse.self, from: data)
         if let srcText = response?.choices.first?.message.content,
             let enText = response?.choices.first?.message.contentEnglish,

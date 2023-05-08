@@ -30,7 +30,7 @@ extension ChatGPTAPI {
         
         var urlRequest = self.getRequestTranslate(lang: lang)
         urlRequest.httpBody = try jsonBody(text: text, isTranslate: true, model: model, systemText: systemText, temperature: temperature)
-        print(String(data:urlRequest.httpBody!, encoding: .utf8))
+//        print(String(data:urlRequest.httpBody!, encoding: .utf8))
         
         return NetworkManager().send(request: urlRequest) { result in
             completion(result)
